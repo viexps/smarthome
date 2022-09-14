@@ -1,8 +1,84 @@
-use std::fmt;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::{self, Write},
+};
 
 pub struct SmartSocket {
     on: bool,
     load: u32,
+}
+
+pub struct SmartThermometer {
+    temperature: f32,
+}
+
+pub trait Device {
+    fn self_info(&self) -> String;
+}
+
+pub struct Room {
+    pub devices: HashMap<String, Box<dyn Device>>,
+}
+
+pub struct SmartHouse {
+    pub rooms: HashMap<String, Room>,
+}
+
+impl SmartHouse {
+    pub fn new() -> Self {
+        Self {
+            rooms: HashMap::new(),
+        }
+    }
+
+    pub fn get_rooms(&self) -> HashSet<&String> {
+        self.rooms.keys().collect()
+    }
+
+    pub fn device_names(&self, room: &str) -> HashSet<&String> {
+        if let Some(room) = self.rooms.get(room) {
+            room.devices.keys().collect()
+        } else {
+            HashSet::new()
+        }
+    }
+
+    pub fn create_report(&self, info_provider: &dyn DeviceInfoProvider) -> String {
+        let mut report = String::from("---SmartHouse---\n");
+        for (room_name, room) in self.rooms.iter() {
+            writeln!(&mut report, "room: {}", room_name).unwrap();
+
+            for (device_name, device) in room.devices.iter() {
+                writeln!(&mut report, "device: {}", device_name).unwrap();
+                writeln!(
+                    &mut report,
+                    "{}",
+                    &info_provider.device_info(room_name, device_name, device.as_ref())
+                )
+                .unwrap();
+            }
+        }
+
+        report
+    }
+}
+
+impl Default for SmartHouse {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub trait DeviceInfoProvider {
+    fn device_info(&self, room: &str, device_name: &str, device: &dyn Device) -> String;
+}
+
+pub struct DefaultDeviceInfoProvider {}
+
+impl DeviceInfoProvider for DefaultDeviceInfoProvider {
+    fn device_info(&self, _room: &str, _device_name: &str, device: &dyn Device) -> String {
+        device.self_info()
+    }
 }
 
 impl SmartSocket {
@@ -26,6 +102,16 @@ impl Default for SmartSocket {
     }
 }
 
+impl Device for SmartSocket {
+    fn self_info(&self) -> String {
+        let state = if self.on { "ON" } else { "OFF" };
+        format!(
+            "device_info: [SmartSocket] state: {}. load: {}",
+            state, self.load
+        )
+    }
+}
+
 impl fmt::Display for SmartSocket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.on {
@@ -34,10 +120,6 @@ impl fmt::Display for SmartSocket {
             write!(f, "[socket] state: off")
         }
     }
-}
-
-pub struct SmartThermometer {
-    temperature: f32,
 }
 
 impl SmartThermometer {
@@ -49,6 +131,15 @@ impl SmartThermometer {
 impl Default for SmartThermometer {
     fn default() -> Self {
         SmartThermometer::new()
+    }
+}
+
+impl Device for SmartThermometer {
+    fn self_info(&self) -> String {
+        format!(
+            "device_info: [SmartThermometer] temperature: {}",
+            self.temperature
+        )
     }
 }
 

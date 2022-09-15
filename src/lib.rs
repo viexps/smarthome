@@ -3,8 +3,9 @@ use std::{
     fmt::Write,
 };
 
-mod device;
-mod error;
+pub mod device;
+pub mod error;
+pub mod server;
 
 pub use device::*;
 pub use error::*;

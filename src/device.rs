@@ -26,6 +26,10 @@ impl SmartSocket {
         self.on = false;
         self.load = 0;
     }
+
+    pub fn set_load(&mut self, load: u32) {
+        self.load = load;
+    }
 }
 
 impl Default for SmartSocket {

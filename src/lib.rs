@@ -1,11 +1,14 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
+    ops::Deref,
 };
 
 mod device;
+mod error;
 
 pub use device::*;
+pub use error::*;
 
 pub struct Room {
     pub devices: HashMap<String, Box<dyn Device>>,
@@ -26,6 +29,10 @@ impl SmartHouse {
         self.rooms.keys().collect()
     }
 
+    pub fn get_room(&self, name: impl AsRef<str>) -> Option<&Room> {
+        self.rooms.get(name.as_ref())
+    }
+
     pub fn device_names(&self, room: &str) -> HashSet<&String> {
         if let Some(room) = self.rooms.get(room) {
             room.devices.keys().collect()
@@ -34,9 +41,14 @@ impl SmartHouse {
         }
     }
 
-    pub fn add_room(&mut self, name: impl AsRef<str>, room: Room) -> &mut Self {
-        self.rooms.insert(name.as_ref().to_owned(), room);
-        self
+    pub fn add_room(&mut self, name: impl AsRef<str>, room: Room) -> Result<&mut Self, MyError> {
+        let name = name.as_ref();
+        if self.rooms.contains_key(name) {
+            Err(MyError::RoomAlreadyExists)
+        } else {
+            self.rooms.insert(name.to_owned(), room);
+            Ok(self)
+        }
     }
 
     pub fn create_report(&self, info_provider: &dyn DeviceInfoProvider) -> String {
@@ -74,6 +86,10 @@ impl Room {
 
     pub fn device_names(&self) -> HashSet<&String> {
         self.devices.keys().collect()
+    }
+
+    pub fn get_device(&self, name: impl AsRef<str>) -> Option<&dyn Device> {
+        self.devices.get(name.as_ref()).map(|x| x.deref())
     }
 
     pub fn add_device(&mut self, name: impl AsRef<str>, device: Box<dyn Device>) -> &mut Self {
@@ -117,10 +133,12 @@ mod tests {
             room.device_names(),
             HashSet::from([&"socket".to_string(), &"thermo".to_string()])
         );
+
+        assert!(room.get_device("socket").is_some());
     }
 
     #[test]
-    fn test_smarthouse() {
+    fn test_smarthouse() -> Result<(), MyError> {
         let socket = SmartSocket::new();
         let thermo = SmartThermometer::new();
 
@@ -129,7 +147,7 @@ mod tests {
             .add_device("thermo", Box::new(thermo));
 
         let mut sh = SmartHouse::new();
-        sh.add_room("room1", room);
+        sh.add_room("room1", room)?;
 
         assert_eq!(sh.get_rooms(), HashSet::from([&"room1".to_string()]));
 
@@ -137,5 +155,17 @@ mod tests {
             sh.device_names("room1"),
             HashSet::from([&"socket".to_string(), &"thermo".to_string()])
         );
+        Ok(())
+    }
+
+    #[test]
+    fn add_room_with_a_same_name() -> Result<(), MyError> {
+        let mut sh = SmartHouse::new();
+        sh.add_room("room1", Room::new())?;
+        assert_eq!(
+            sh.add_room("room1", Room::new()).err(),
+            Some(MyError::RoomAlreadyExists)
+        );
+        Ok(())
     }
 }

@@ -51,6 +51,10 @@ impl SmartHouse {
         }
     }
 
+    pub fn remove_room(&mut self, name: impl AsRef<str>) -> Option<Room> {
+        self.rooms.remove(name.as_ref())
+    }
+
     pub fn create_report(&self, info_provider: &dyn DeviceInfoProvider) -> String {
         let mut report = String::from("---SmartHouse---\n");
         for (room_name, room) in self.rooms.iter() {
@@ -95,6 +99,10 @@ impl Room {
     pub fn add_device(&mut self, name: impl AsRef<str>, device: Box<dyn Device>) -> &mut Self {
         self.devices.insert(name.as_ref().to_owned(), device);
         self
+    }
+
+    pub fn remove_device(&mut self, name: impl AsRef<str>) -> Option<Box<dyn Device>> {
+        self.devices.remove(name.as_ref())
     }
 }
 
@@ -166,6 +174,11 @@ mod tests {
             sh.add_room("room1", Room::new()).err(),
             Some(MyError::RoomAlreadyExists)
         );
+
+        sh.remove_room("room1");
+
+        assert!(sh.get_rooms().is_empty());
+        assert!(sh.get_room("room1").is_none());
         Ok(())
     }
 }

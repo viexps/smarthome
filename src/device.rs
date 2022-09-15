@@ -1,5 +1,9 @@
 use std::fmt;
 
+pub enum Device {
+    Socket(SmartSocket),
+    Thermo(SmartThermometer),
+}
 pub struct SmartSocket {
     on: bool,
     load: u32,
@@ -7,10 +11,6 @@ pub struct SmartSocket {
 
 pub struct SmartThermometer {
     temperature: f32,
-}
-
-pub trait Device {
-    fn self_info(&self) -> String;
 }
 
 impl SmartSocket {
@@ -34,13 +34,23 @@ impl Default for SmartSocket {
     }
 }
 
-impl Device for SmartSocket {
-    fn self_info(&self) -> String {
-        let state = if self.on { "ON" } else { "OFF" };
-        format!(
-            "device_info: [SmartSocket] state: {}. load: {}",
-            state, self.load
-        )
+impl Device {
+    pub fn self_info(&self) -> String {
+        match self {
+            Device::Socket(socket) => {
+                let state = if socket.on { "ON" } else { "OFF" };
+                format!(
+                    "device_info: [SmartSocket] state: {}. load: {}",
+                    state, socket.load
+                )
+            }
+            Device::Thermo(thermo) => {
+                format!(
+                    "device_info: [SmartThermometer] temperature: {}",
+                    thermo.temperature
+                )
+            }
+        }
     }
 }
 
@@ -63,15 +73,6 @@ impl SmartThermometer {
 impl Default for SmartThermometer {
     fn default() -> Self {
         SmartThermometer::new()
-    }
-}
-
-impl Device for SmartThermometer {
-    fn self_info(&self) -> String {
-        format!(
-            "device_info: [SmartThermometer] temperature: {}",
-            self.temperature
-        )
     }
 }
 

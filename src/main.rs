@@ -10,7 +10,7 @@ fn main() {
     let thermo = SmartThermometer::new();
 
     let room1 = {
-        let s1: Box<dyn Device> = Box::new(socket1);
+        let s1 = Device::Socket(socket1);
 
         Room {
             devices: HashMap::from([("socket1".to_string(), s1)]),
@@ -18,8 +18,8 @@ fn main() {
     };
 
     let room2 = {
-        let s2: Box<dyn Device> = Box::new(socket2);
-        let t: Box<dyn Device> = Box::new(thermo);
+        let s2 = Device::Socket(socket2);
+        let t = Device::Thermo(thermo);
 
         Room {
             devices: HashMap::from([("socket2".to_string(), s2), ("thermo".to_string(), t)]),

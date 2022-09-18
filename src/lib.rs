@@ -1,17 +1,17 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
-    ops::Deref,
 };
 
-mod device;
-mod error;
+pub mod device;
+pub mod error;
+pub mod server;
 
 pub use device::*;
 pub use error::*;
 
 pub struct Room {
-    pub devices: HashMap<String, Box<dyn Device>>,
+    pub devices: HashMap<String, Device>,
 }
 
 pub struct SmartHouse {
@@ -65,7 +65,7 @@ impl SmartHouse {
                 writeln!(
                     &mut report,
                     "{}",
-                    &info_provider.device_info(room_name, device_name, device.as_ref())
+                    &info_provider.device_info(room_name, device_name, device)
                 )
                 .unwrap();
             }
@@ -92,16 +92,16 @@ impl Room {
         self.devices.keys().collect()
     }
 
-    pub fn get_device(&self, name: impl AsRef<str>) -> Option<&dyn Device> {
-        self.devices.get(name.as_ref()).map(|x| x.deref())
+    pub fn get_device(&self, name: impl AsRef<str>) -> Option<&Device> {
+        self.devices.get(name.as_ref())
     }
 
-    pub fn add_device(&mut self, name: impl AsRef<str>, device: Box<dyn Device>) -> &mut Self {
+    pub fn add_device(&mut self, name: impl AsRef<str>, device: Device) -> &mut Self {
         self.devices.insert(name.as_ref().to_owned(), device);
         self
     }
 
-    pub fn remove_device(&mut self, name: impl AsRef<str>) -> Option<Box<dyn Device>> {
+    pub fn remove_device(&mut self, name: impl AsRef<str>) -> Option<Device> {
         self.devices.remove(name.as_ref())
     }
 }
@@ -113,13 +113,13 @@ impl Default for Room {
 }
 
 pub trait DeviceInfoProvider {
-    fn device_info(&self, room: &str, device_name: &str, device: &dyn Device) -> String;
+    fn device_info(&self, room: &str, device_name: &str, device: &Device) -> String;
 }
 
 pub struct DefaultDeviceInfoProvider {}
 
 impl DeviceInfoProvider for DefaultDeviceInfoProvider {
-    fn device_info(&self, _room: &str, _device_name: &str, device: &dyn Device) -> String {
+    fn device_info(&self, _room: &str, _device_name: &str, device: &Device) -> String {
         device.self_info()
     }
 }
@@ -134,8 +134,8 @@ mod tests {
         let thermo = SmartThermometer::new();
 
         let mut room = Room::new();
-        room.add_device("socket", Box::new(socket))
-            .add_device("thermo", Box::new(thermo));
+        room.add_device("socket", Device::Socket(socket))
+            .add_device("thermo", Device::Thermo(thermo));
 
         assert_eq!(
             room.device_names(),
@@ -151,8 +151,8 @@ mod tests {
         let thermo = SmartThermometer::new();
 
         let mut room = Room::new();
-        room.add_device("socket", Box::new(socket))
-            .add_device("thermo", Box::new(thermo));
+        room.add_device("socket", Device::Socket(socket))
+            .add_device("thermo", Device::Thermo(thermo));
 
         let mut sh = SmartHouse::new();
         sh.add_room("room1", room)?;

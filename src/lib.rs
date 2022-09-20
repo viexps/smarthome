@@ -170,10 +170,11 @@ mod tests {
     fn add_room_with_a_same_name() -> Result<(), MyError> {
         let mut sh = SmartHouse::new();
         sh.add_room("room1", Room::new())?;
-        assert_eq!(
-            sh.add_room("room1", Room::new()).err(),
-            Some(MyError::RoomAlreadyExists)
-        );
+
+        assert!(matches!(
+            sh.add_room("room1", Room::new()),
+            Err(MyError::RoomAlreadyExists)
+        ));
 
         sh.remove_room("room1");
 

@@ -1,9 +1,9 @@
 use std::{
-    io::{self, Read, Write},
+    io::{Read, Write},
     net::{TcpListener, TcpStream, ToSocketAddrs},
 };
 
-use crate::SmartSocket;
+use crate::{MyError, SmartSocket};
 
 pub struct ServerHandle {
     listener: TcpListener,
@@ -23,14 +23,14 @@ impl ServerHandle {
         Self { listener, state }
     }
 
-    pub fn run(&mut self) -> Result<(), io::Error> {
+    pub fn run(&mut self) -> Result<(), MyError> {
         for stream in self.listener.incoming() {
             ServerHandle::handle_client(stream?, &mut self.state).ok();
         }
         Ok(())
     }
 
-    fn handle_client(mut stream: TcpStream, state: &mut State) -> Result<(), io::Error> {
+    fn handle_client(mut stream: TcpStream, state: &mut State) -> Result<(), MyError> {
         let mut buf = [0u8; 128];
         loop {
             let read = stream.read(&mut buf)?;
